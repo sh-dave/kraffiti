@@ -288,6 +288,7 @@ int main(int argc, char **argv) {
 	int width = -1;
 	int height = -1;
 	float scale = 1;
+	int lighten_by = 0;
 
 	for (int i = 1; i < argc; ++i) {
 		std::string arg(argv[i]);
@@ -337,6 +338,9 @@ int main(int argc, char **argv) {
 		else if (arg == "donothing") {
 			donothing = true;
 		}
+		else if (startsWith(arg, "lighten=")) {
+			lighten_by = strtoll(arg.substr(8).c_str(), nullptr, 16);
+		}
 		else {
 			// Unknown parameter
 		}
@@ -368,6 +372,10 @@ int main(int argc, char **argv) {
 	if (height < 0) height = image.height;
 
 	printf("#%ix%i\n", width, height);
+
+	if (lighten_by > 0) {
+		image = lightenBy(image, lighten_by);
+	}
 
 	if (dobackground) {
 		for (int y = 0; y < image.height; ++y)

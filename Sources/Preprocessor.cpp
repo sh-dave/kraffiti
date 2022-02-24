@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize.h"
+#include "lighten.c.h"
 
 Image transparent(Image image, unsigned color) {
 	Image result((byte*)malloc(image.stride * image.height), image.width, image.height);
@@ -55,13 +56,13 @@ Image prealpha(Image image) {
 Image scale(Image image, int width, int height, bool pointsample) {
 	if (!image.isHdr) {
 		Image result((byte*)malloc(width * height * image.components), width, height, image.components);
-		
+
 		stbir_resize_uint8_generic(image.pixels, image.width, image.height, image.stride,
 								   result.pixels, result.width, result.height, result.stride,
 								   image.components, 3, 0,
 								   STBIR_EDGE_CLAMP, pointsample ? STBIR_FILTER_BOX : STBIR_FILTER_CUBICBSPLINE, STBIR_COLORSPACE_SRGB,
 								   0);
-		
+
 		return result;
 	}
 	else {
@@ -82,7 +83,7 @@ Image scaleKeepAspect(Image image, int width, int height, bool pointsample) {
 	double h = height;
 	double ow = image.width;
 	double oh = image.height;
-	
+
 	if (w / h == ow / oh) {
 		return scale(image, width, height, pointsample);
 	}
@@ -95,7 +96,7 @@ Image scaleKeepAspect(Image image, int width, int height, bool pointsample) {
 		result.pixels[y * result.stride + x * 4 + 2] = 0;
 		result.pixels[y * result.stride + x * 4 + 3] = 0;
 	}
-	
+
 	double scale = 1;
 	if (ow / oh > w / h) {
 		scale = w / ow;
@@ -145,6 +146,24 @@ Image toPowerOfTwo(Image image) {
 		result.pixels[y * result.stride + x * 4 + 1] = image.pixels[y * image.stride + x * 4 + 1];
 		result.pixels[y * result.stride + x * 4 + 2] = image.pixels[y * image.stride + x * 4 + 2];
 		result.pixels[y * result.stride + x * 4 + 3] = image.pixels[y * image.stride + x * 4 + 3];
+	}
+
+	return result;
+}
+
+Image lightenBy(Image image, float amount) {
+	Image result((byte*)malloc(image.stride * image.height), image.width, image.height);
+
+	for (int y = image.height - 1; y >= 0; --y) {
+		for (int x = 0; x < image.width; ++x) {
+			unsigned char *pixel = &image.pixels[y * image.stride + x * 4];
+			rgb_t rgb = {pixel[0], pixel[1], pixel[2]};
+			lighten_image(&rgb, amount);
+			result.pixels[y * image.stride + x * 4 + 0] = rgb.r;
+			result.pixels[y * image.stride + x * 4 + 1] = rgb.g;
+			result.pixels[y * image.stride + x * 4 + 2] = rgb.b;
+			result.pixels[y * image.stride + x * 4 + 3] = pixel[3];
+		}
 	}
 
 	return result;
